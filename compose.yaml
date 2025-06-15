@@ -1,0 +1,77 @@
+services:
+  infisical:
+    container_name: infisical
+    image: infisical/infisical:v0.132.4-postgres@sha256:09f687edeac482252d6ff901051ba916086f0ab3258eea03dfed6022998e8e61
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - ENCRYPTION_KEY=${SERVICE_PASSWORD_ENCRYPTIONKEY}
+      - AUTH_SECRET=${SERVICE_REALBASE64_64_AUTHSECRET}
+
+      - SERVICE_FQDN_INFISICAL_8080
+      - SITE_URL=${SERVICE_FQDN_INFISICAL_8080}
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-false}
+      - INVITE_ONLY_SIGNUP=${INVITE_ONLY_SIGNUP:-true}
+
+      - DB_CONNECTION_URI=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_IGNORE_TLS=${SMTP_IGNORE_TLS:-false}
+      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-true}
+      - SMTP_TLS_REJECT_UNAUTHORIZED=${SMTP_TLS_REJECT_UNAUTHORIZED:-true}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    container_name: infisical-redis
+    image: redis:7.4.1-alpine3.20@sha256:c1e88455c85225310bbea54816e9c3f4b5295815e6dbf80c34d40afc6df28275
+    restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - infisical
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    container_name: infisical-postgres
+    image: postgres:17.5-alpine3.20@sha256:ccd14e0306cef4c2943a4bda5a2c6a77201a426eb2576d888e5cdc28ccddca75
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${SERVICE_USER_POSTGRES}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: ${POSTGRES_DB:-infisical}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres-data:
+    name: infisical-postgres-data
+    driver: local
+  redis-data:
+    name: infisical-redis-data
+    driver: local

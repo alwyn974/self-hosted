@@ -1,0 +1,23 @@
+services:
+  infisical:
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    networks:
+      - infisical
+
+  redis:
+    networks:
+      - infisical
+
+  postgres:
+    env_file:
+      - .env
+    networks:
+      - infisical
+
+
+networks:
+  infisical:
+    driver: bridge

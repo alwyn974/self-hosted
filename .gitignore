@@ -2,3 +2,6 @@
 .env
 .idea
 docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yaml
+compose.override.yml
